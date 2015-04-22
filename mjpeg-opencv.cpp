@@ -1,20 +1,3 @@
-/*
- * =====================================================================================
- *
- *       Filename:  mjpeg-opencv.cpp
- *	  	
- *    Description:  opencv+Raspberry Pi+HOGi+boost
- *
- *
- *        Version:  1.0
- *        Created:  2014/3/29 20:00:34
- *         Author:  yuliyang
- *
- *		     Mail:  wzyuliyang911@gmail.com
- *			 Blog:  http://www.cnblogs.com/yuliyang
- *
- * =====================================================================================
- */
 
 #include <fstream>
 #include <iostream>
@@ -37,26 +20,27 @@
 #include <boost/atomic.hpp>
 using namespace std;
 using namespace cv;
+
 VideoCapture cap;
 Mat img,showimg;
 HOGDescriptor hog;
 deque<Mat>imgs;
 
 size_t i, j;
-boost::lockfree::spsc_queue<Mat, boost::lockfree::capacity<1024> > spsc_queue; /* spsc_queueÓÃÓÚÍ¼ÏñµÄ»º´æ£¬ÒòÎª»ñÈ¡Í¼ÏñºÍ´¦ÀíÍ¼Ïñ¶¼ÓĞ½Ï´óµÄÑÓÊ±£¬ËùÒÔ²ÉÓÃÉú²úÕßÏû·ÑÕßÄ£Ê½£¬Éú²úÕß¼´ÎªÒ»¸ö×¨ÃÅ´¦Àí»ñÈ¡Í¼ÏñµÄÏß³Ì£¬Ïû·ÑÕß¼´Îª¶ÔÍ¼Ïñ´¦ÀíµÄÏß³Ì */
+boost::lockfree::spsc_queue<Mat, boost::lockfree::capacity<1024> > spsc_queue; /* spsc_queueç”¨äºå›¾åƒçš„ç¼“å­˜ï¼Œå› ä¸ºè·å–å›¾åƒå’Œå¤„ç†å›¾åƒéƒ½æœ‰è¾ƒå¤§çš„å»¶æ—¶ï¼Œæ‰€ä»¥é‡‡ç”¨ç”Ÿäº§è€…æ¶ˆè´¹è€…æ¨¡å¼ï¼Œç”Ÿäº§è€…å³ä¸ºä¸€ä¸ªä¸“é—¨å¤„ç†è·å–å›¾åƒçš„çº¿ç¨‹ï¼Œæ¶ˆè´¹è€…å³ä¸ºå¯¹å›¾åƒå¤„ç†çš„çº¿ç¨‹ */
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  producer
- *  Description:  ¼òµ¥µÄ»ñÈ¡Í¼Ïñ
+ *  Description:  ç®€å•çš„è·å–å›¾åƒ
  * =====================================================================================
  */
 void producer(void)
 {
 	while (true)
 	{
-		cap.read(img);                          /* »ñÈ¡Í¼Ïñ */
-		spsc_queue.push(img);                   /* ¼ÓÈëµ½»º´æ¶ÓÁĞÖĞ */
+		cap.read(img);                          /* è·å–å›¾åƒ */
+		spsc_queue.push(img);                   /* åŠ å…¥åˆ°ç¼“å­˜é˜Ÿåˆ—ä¸­ */
 
 	}
 }
@@ -66,7 +50,7 @@ boost::atomic<bool> done (false);
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  consumer
- *  Description:  ´¦ÀíÍ¼ÏñÏß³Ì£¬¼ÆËãhogºÍÏÔÊ¾
+ *  Description:  å¤„ç†å›¾åƒçº¿ç¨‹ï¼Œè®¡ç®—hogå’Œæ˜¾ç¤º
  * =====================================================================================
  */
 void consumer(void)
@@ -104,8 +88,8 @@ void consumer(void)
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  load_lear_model
- *  Description:  ¼ÓÔØ×Ô¼ºÑµÁ·µÄhog ĞĞÈËmodel (INRIA person detection database)
- *  ²Î¿¼£ºhttp://blog.youtueye.com/work/opencv-hog-peopledetector-trainning.html
+ *  Description:  åŠ è½½è‡ªå·±è®­ç»ƒçš„hog è¡Œäººmodel (INRIA person detection database)
+ *  å‚è€ƒï¼šhttp://blog.youtueye.com/work/opencv-hog-peopledetector-trainning.html
  * =====================================================================================
  */
 vector<float> load_lear_model(const char* model_file)
@@ -205,21 +189,22 @@ vector<float> load_lear_model(const char* model_file)
 
 int main(int argc, char** argv)
 {
-    cout << "boost::lockfree::queue is ";
+        cout << "boost::lockfree::queue is ";
 	if (!spsc_queue.is_lock_free())
 		cout << "not ";
 	cout << "lockfree" << endl;
-	vector<float> detector = load_lear_model(argv[1]); /* ¼ÓÔØ×Ô¼ºÑµÁ·µÄmodle */
+	vector<float> detector = load_lear_model(argv[1]); /* load model */
 	hog.setSVMDetector(detector);
 
-	cap.open("http://10.104.5.192:8888/?action=stream?dummy=param.mjpg");//ÔÚä¯ÀÀÆ÷ÀïÊäÈëhttp://10.104.5.192:8888
+	cap.open("d://1.avi");
+	//cap.open("http://10.104.5.192:8888/?action=stream?dummy=param.mjpg");//get image by mjpeg stream
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 320);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
 	if (!cap.isOpened())
 		return -1;
 
 	thread mThread( producer );
-	Sleep(5000);                                /* ÈÃÉú²úÕßÏÈÉú²úÒ»»á¶ù */
+	Sleep(5000);                                /* è®©ç”Ÿäº§è€…å…ˆç”Ÿäº§ä¸€ä¼šå„¿ */
 
 	thread mThread2( consumer );
 	mThread.join();
